@@ -58,10 +58,12 @@ class ScbApi():
 
     def get_random_table_values(self):
         query = []
+        allVariable = None
         for variable in self.current_data["variables"]:
             code = variable['code']
             if code == 'Tid':
                 selection = {"filter": "all", "values": ["*"]}
+                allVariable = variable
             else:
                 selection = {"filter": "item", "values": [random.choice(variable["values"])]}
             jvar = {'code': variable['code'], 'selection': selection}
@@ -73,12 +75,13 @@ class ScbApi():
         response = requests.post(self.current, data=json.dumps(jreq))
         if response.status_code != 200:
             raise Exception("Unexpected response "+response.status_code+": "+response.text)
-        return TableData(json.loads(response.text[1:]))
+        return TableData(json.loads(response.text[1:]), allVariable)
         #return response.text
 
 class TableData():
-    def __init__(self, data):
+    def __init__(self, data, variable):
         self.data = data
+        self.variable = variable
 
     def get_constant_keys(self):
         data = self.data["data"]
@@ -117,6 +120,14 @@ class TableData():
         for column in self.data["columns"]:
             if column["type"] == "c":
                 return column
+
+    def get_variable_code(self):
+        return self.variable['code']
+
+    def get_column_index(self, code):
+        for i in range(0, len(self.data["columns"])):
+            if self.data["columns"][i]["code"] == code:
+                return i
 
 class TableMetaData():
     def __init__(self, data):
