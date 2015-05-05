@@ -3,9 +3,24 @@ __author__ = 'calx'
 from scbapi import ScbApi
 from flask import Flask
 from flask import render_template
+from threading import Timer
 
 app = Flask(__name__)
 scb = ScbApi()
+
+interval = 15.0
+timer = None
+table = None
+
+class Table():
+    def __init__(self, table_metadata, table_data, url, result, values, columns):
+        self.table_metadata = table_metadata
+        self.table_data = table_data
+        self.url = url
+        self.result = result
+        self.values = values
+        self.columns = columns
+
 
 def orig_value_to_float(str_value):
     try:
@@ -13,8 +28,8 @@ def orig_value_to_float(str_value):
     except ValueError:
         return 0.0
 
-@app.route("/")
-def index():
+
+def load_table():
     table_metadata = scb.get_random_table()
     print(table_metadata.data)
     table_data = scb.get_random_table_values()
@@ -34,20 +49,28 @@ def index():
                        "origValue": datum["values"][0],
                        "value": orig_value_to_float(datum["values"][0])})
 
-    #var_key = table_data.get_variable_code()
     result = "resultat = "+str(table_data.get_content_column()["text"])
     print(table_data.data["columns"])
     print(result)
     print(values)
-    #print(var_key)
-    #print(table_metadata.get_values(var_key))
+
+    global table
+    global timer
+    table = Table(table_metadata, table_data, scb.get_location(), result, values, columns)
+    timer = Timer(interval, load_table)
+    timer.start()
+
+
+@app.route("/")
+def index():
     return render_template("index.html",
-                           title=table_metadata.data["title"],
-                           tableUrl=scb.get_location(),
-                           unit=result,
-                           valuesY=values,
-                           columns=columns)
+                           title=table.table_metadata.data["title"],
+                           tableUrl=table.url,
+                           unit=table.result,
+                           valuesY=table.values,
+                           columns=table.columns)
 
 
 if __name__ == "__main__":
+    load_table()
     app.run(debug=True)
