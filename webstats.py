@@ -11,6 +11,7 @@ scb = ScbApi()
 interval = 15.0
 timer = None
 table = None
+ended = False
 
 class Table():
     def __init__(self, table_metadata, table_data, url, result, values, columns):
@@ -28,6 +29,11 @@ def orig_value_to_float(str_value):
     except ValueError:
         return 0.0
 
+
+def restart_timer():
+    global timer
+    timer = Timer(interval, load_table)
+    timer.start()
 
 def load_table():
     table_metadata = scb.get_random_table()
@@ -55,11 +61,9 @@ def load_table():
     print(values)
 
     global table
-    global timer
     table = Table(table_metadata, table_data, scb.get_location(), result, values, columns)
-    timer = Timer(interval, load_table)
-    timer.start()
-
+    if not ended:
+        restart_timer()
 
 @app.route("/")
 def index():
@@ -74,3 +78,5 @@ def index():
 if __name__ == "__main__":
     load_table()
     app.run(debug=True)
+    ended = True
+    timer.cancel()
