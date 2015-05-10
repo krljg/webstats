@@ -13,8 +13,8 @@ def get(url, expected=200):
     return response.json()
 
 class ScbApi():
-    def __init__(self):
-        self.lang = "sv"
+    def __init__(self, lang="sv"):
+        self.lang = lang
         self.current = "http://api.scb.se/OV0104/v1/doris/"+self.lang+"/ssd/"
         self.current_data = None
         self.cache = {}

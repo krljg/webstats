@@ -3,7 +3,7 @@
 <head lang="en">
     <meta charset="UTF-8">
     <title>Random Statistics from the SCB</title>
-    <meta http-equiv="refresh" content="20">
+    <!-- <meta http-equiv="refresh" content="20"> -->
     <style>
 
 .rect {
@@ -32,8 +32,28 @@
     <script src="static/d3.min.js" charset="utf-8"></script>
 </head>
 <body>
+<button onclick="stopReloadTimer()">Stop reload timer</button>
+<button id="reloadButton" onclick="window.location.reload();">Reload - 30s</button>
+<script>
+var secondsLeft = 30;
+var reloadTimer = setInterval(function () {reloadCountdown()}, 1000);
+function reloadCountdown() {
+    secondsLeft--;
+    if(secondsLeft <= 0) {
+        window.location.reload();
+    } else {
+        document.getElementById("reloadButton").innerHTML = "Reload - "+secondsLeft+"s";
+    }
+}
+
+function stopReloadTimer() {
+    clearInterval(reloadTimer);
+    document.getElementById("reloadButton").innerHTML = "Reload ";
+}
+
+</script>
 <h1>{{title}}</h1>
-<a href="{{tableUrl}}">{{tableUrl}}</a><br>
+<p>source: <a href="{{tableUrl}}">{{tableUrl}}</a></p>
 {% for column in columns %}
   <p>{{column}}</p>
 {% endfor %}

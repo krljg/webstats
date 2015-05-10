@@ -6,7 +6,7 @@ from flask import render_template
 from threading import Timer
 
 app = Flask(__name__)
-scb = ScbApi()
+scb = ScbApi("en")
 
 interval = 15.0
 timer = None
@@ -55,7 +55,7 @@ def load_table():
                        "origValue": datum["values"][0],
                        "value": orig_value_to_float(datum["values"][0])})
 
-    result = "resultat = "+str(table_data.get_content_column()["text"])
+    result = "content = "+str(table_data.get_content_column()["text"])
     print(table_data.data["columns"])
     print(result)
     print(values)
