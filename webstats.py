@@ -37,6 +37,7 @@ def orig_value_to_float(str_value):
 
 def convert_time(orig_value):
     if len(orig_value) == 4:
+        # Just a year
         return orig_value+"-1-1"
     elif len(orig_value) == 6:
 
@@ -51,7 +52,7 @@ def convert_time(orig_value):
             return orig_value[:4]+"-12-31"
     elif len(orig_value) == 7:
         # Assume 2003M04 type value
-        return orig_value[:4]+"-"+orig_value[4:]+"1"
+        return orig_value[:4]+"-"+orig_value[5:]+"-1"
     elif len(orig_value) == 9:
         # Assume 2011-M041 type value
         return orig_value[:4]+"-"+orig_value[6:8]+"-"+orig_value[-1]
