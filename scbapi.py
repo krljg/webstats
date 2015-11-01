@@ -256,12 +256,13 @@ class Table:
         for column in self.data["columns"]:
             if column["type"] == "c":
                 return column
+        raise KeyError("A column with 'type==c' does not exist in "+str(self.data["columns"]))
 
     def get_column_index(self, code):
         for i in range(0, len(self.data["columns"])):
             if self.data["columns"][i]["code"] == code:
                 return i
-        raise KeyError(code + " does not exist in "+self.data["columns"])
+        raise KeyError(code + " does not exist in "+str(self.data["columns"]))
 
     def get_c3_values(self):
         c3values = [['x'], ["data1"]]
@@ -282,6 +283,30 @@ class Table:
         print("data:")
         print(self.data)
 
+    @staticmethod
+    def pad(length, char=" "):
+        text = ""
+        if length > 0:
+            for i in range(0, length):
+                text += char
+        return text
+
+    def calculate_widths(self):
+        widths = {}
+        columns = self.data["columns"]
+        for column in columns:
+            widths[column["code"]] = len(column["text"])
+        for datum in self.data["data"]:
+            i = 0
+            for key in datum["key"]:
+                code = columns[i]["code"]
+                value = self.get_value_text_for_value(code, key)
+                width = len(value)
+                if widths[code] < width:
+                    widths[code] = width
+                i += 1
+        return widths
+
     def values_as_table_str(self):
         text = ""
         if self.data is None:
@@ -289,11 +314,12 @@ class Table:
         columns = self.data["columns"]
         line1 = "|"
         line2 = "|"
+        print("columns: "+str(columns))
+        widths = self.calculate_widths()
         for column in columns:
             coltext = column["text"]
-            line1 += coltext
-            for i in range(0, len(coltext)):
-                line2 += "-"
+            line1 += coltext + self.pad(widths[column["code"]] - len(coltext))
+            line2 += self.pad(widths[column["code"]], "-")
             line1 += "|"
             line2 += "|"
         text += line1 + "\n" + line2 + "\n"
@@ -303,9 +329,10 @@ class Table:
             for key in datum["key"]:
                 code = columns[i]["code"]
                 value = self.get_value_text_for_value(code, key)
-                text += value + "|"
+                text += value + self.pad(widths[code]-len(value))+"|"
                 i += 1
-            text += str(datum["values"]) + "|\n"
+            value = str(datum["values"])
+            text += value + self.pad(widths[columns[-1]["code"]]-len(value))+"|\n"
         return text
 
     def __str__(self):
