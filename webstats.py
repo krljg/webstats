@@ -15,7 +15,8 @@ timer = None
 table = None
 ended = False
 
-class Table():
+
+class TableOld:
     def __init__(self, table_metadata, table_data, url, result, values, columns, c3values):
         self.table_metadata = table_metadata
         self.table_data = table_data
@@ -23,8 +24,18 @@ class Table():
         self.result = result
         self.values = values
         self.columns = columns
-        self.c3data = dict()
+        #self.c3data = dict()
         #self.c3data["columns"] = c3values
+        self.c3data = c3values
+
+
+class Table:
+    def __init__(self, title, location, result, values, columns, c3values):
+        self.title = title
+        self.location = location
+        self.result = result
+        self.values = values
+        self.columns = columns
         self.c3data = c3values
 
 
@@ -57,19 +68,53 @@ def convert_time(orig_value):
         # Assume 2011-M041 type value
         return orig_value[:4]+"-"+orig_value[6:8]+"-"+orig_value[-1]
 
-
     return orig_value
+
+
 def restart_timer():
     global timer
     timer = Timer(interval, load_table)
     timer.start()
 
+
 def load_table():
     try:
+        scbTable = scb.get_random_table()
+        scb.get_random_table_values(scbTable)
+        print(scbTable)
+
+        result = scbTable.get_content_column()["text"]
+        values = []
+
+        columns = []
+        i = 0
+        for key in scbTable.get_constant_keys():
+            column = scbTable.data["columns"][i]
+            columns.append(column["text"]+"="+scbTable.get_value_text_for_value(column["code"], key)+" ")
+            i += 1
+
+        c3data = scbTable.get_c3_values()
+
+        global table
+        table = Table(scbTable.get_title(), scbTable.get_location(), result, values, columns, c3data)
+
+    except Exception as ex:
+        print(ex)
+        sys.stderr.write(traceback.format_exc())
+        # print(traceback.format_exc())
+    if not ended:
+        restart_timer()
+
+
+def load_table_old():
+    try:
+
         table_metadata = scb.get_random_table()
+        print("metadata")
         print(table_metadata.data)
-        table_data = scb.get_random_table_values()
+        table_data = scb.get_random_table_values_old()
         data = table_data.data["data"]
+        print("data")
         print(data[0])
         columns = []
         i = 0
@@ -96,19 +141,20 @@ def load_table():
         print(values)
 
         global table
-        table = Table(table_metadata, table_data, scb.get_location(), result, values, columns, c3values)
+        table = TableOld(table_metadata, table_data, scb.get_location(), result, values, columns, c3values)
     except Exception as ex:
         print(ex)
         sys.stderr.write(traceback.format_exc())
-        #print(traceback.format_exc())
+        # print(traceback.format_exc())
     if not ended:
         restart_timer()
+
 
 @app.route("/")
 def index():
     return render_template("index.html",
-                           title=table.table_metadata.data["title"],
-                           tableUrl=table.url,
+                           title=table.title,
+                           tableUrl=table.location,
                            unit=table.result,
                            valuesY=table.values,
                            columns=table.columns,
