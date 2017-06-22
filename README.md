@@ -4,6 +4,22 @@ A web server that shows random graphs using statistics from [Statistiska Central
 
 ## How to Run
 
-Add d3.min.js and c3-0.4.10 to the "static" directory.
+Install the required dependencies in the requirements.txt file
 
-Run `python webstats.py`
+`pip install -r requirements.txt`
+
+Then you should be able to run webstats:
+
+`python webstats.py`
+
+Once it's running you can point your web browser at http://localhost:5000
+and you should see graphs and stuff.
+
+#### If You Are Using Virtualenv You Can Do This
+
+```
+$ virtualenv webstats
+$ source webstats/bin/activate
+$ pip install -r requirements.txt
+$ python webstats.py
+```
