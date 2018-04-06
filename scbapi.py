@@ -1,6 +1,8 @@
 import requests
 import random
 import json
+import logging
+
 
 __author__ = 'calx'
 
@@ -108,10 +110,8 @@ class ScbApi:
         resp = {"format": "json"}
         jreq = {"query": query, "response": resp}
 
-        print("Query: ")
-        print(jreq)
-        print("Location: ")
-        print(self.current)
+        logging.info("Query: "+str(jreq))
+        logging.info("Location: "+str(self.current))
         response = requests.post(self.current, data=json.dumps(jreq))
 
         if response.status_code != 200:
@@ -138,10 +138,8 @@ class ScbApi:
         resp = {"format": "json"}
         jreq = {"query": query, "response": resp}
         #print(json.dumps(jreq))
-        print("Query: ")
-        print(jreq)
-        print("Location: ")
-        print(self.current)
+        logging.info("Query: {}".format(jreq))
+        logging.info("Location: {}".format(self.current))
         response = requests.post(self.current, data=json.dumps(jreq))
         if response.status_code != 200:
             raise Exception("Unexpected response "+response.status_code+": "+response.text)
@@ -314,7 +312,7 @@ class Table:
         columns = self.data["columns"]
         line1 = "|"
         line2 = "|"
-        print("columns: "+str(columns))
+        logging.info("columns: "+str(columns))
         widths = self.calculate_widths()
         for column in columns:
             coltext = column["text"]

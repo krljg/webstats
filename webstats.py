@@ -6,6 +6,7 @@ from flask import render_template
 from threading import Timer
 import traceback
 import sys
+import logging
 
 app = Flask(__name__)
 scb = ScbApi("en")
@@ -81,7 +82,8 @@ def load_table():
     try:
         scbTable = scb.get_random_table()
         scb.get_random_table_values(scbTable)
-        print(scbTable)
+        logging.info(scbTable)
+        # print(scbTable)
 
         result = scbTable.get_content_column()["text"]
         values = []
@@ -99,8 +101,9 @@ def load_table():
         table = Table(scbTable.get_title(), scbTable.get_location(), result, values, columns, c3data)
 
     except Exception as ex:
-        print(ex)
-        sys.stderr.write(traceback.format_exc())
+        logging.exception(ex)
+        # print(ex)
+        # sys.stderr.write(traceback.format_exc())
         # print(traceback.format_exc())
     if not ended:
         restart_timer()
@@ -110,12 +113,12 @@ def load_table_old():
     try:
 
         table_metadata = scb.get_random_table()
-        print("metadata")
-        print(table_metadata.data)
+        logging.info("metadata\n{}".format(table_metadata.data))
+        # logging.info(table_metadata.data)
         table_data = scb.get_random_table_values_old()
         data = table_data.data["data"]
-        print("data")
-        print(data[0])
+        logging.info("data\n{}".format(data[0]))
+        # print(data[0])
         columns = []
         i = 0
         for key in table_data.get_constant_keys():
@@ -136,15 +139,16 @@ def load_table_old():
                            "origValue": datum["values"][0],
                            "value": orig_value_to_float(datum["values"][0])})
 
-        print(table_data.data["columns"])
-        print(result)
-        print(values)
+        logging.info(table_data.data["columns"])
+        logging.info(result)
+        logging.info(values)
 
         global table
         table = TableOld(table_metadata, table_data, scb.get_location(), result, values, columns, c3values)
     except Exception as ex:
-        print(ex)
-        sys.stderr.write(traceback.format_exc())
+        logging.exception(ex)
+        # print(ex)
+        # sys.stderr.write(traceback.format_exc())
         # print(traceback.format_exc())
     if not ended:
         restart_timer()
@@ -162,6 +166,7 @@ def index():
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     load_table()
     app.run(debug=True, host='0.0.0.0', port=5000)
     ended = True
