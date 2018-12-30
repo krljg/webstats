@@ -80,6 +80,11 @@ class ScbApi:
         self.current = sup
         return self.current_data
 
+    def get_table(self, url):
+        self.current = url
+        self.current_data = self.cached_get(url)
+        return Table(self.current_data, self.current)
+
     def get_random_table(self):
         self.current = "http://api.scb.se/OV0104/v1/doris/"+self.lang+"/ssd/"
         self.get_current()
@@ -116,8 +121,8 @@ class ScbApi:
 
         if response.status_code != 200:
             raise Exception("Unexpected response "+str(response.status_code)+": "+response.text)
-        rspStr = json.loads(response.text[1:])
-        scbTable.add_data(rspStr, allVariable)
+        rspJson = json.loads(response.text[1:])
+        scbTable.add_data(rspJson, allVariable)
         #return TableData(json.loads(response.text[1:]), allVariable)
 
     def get_random_table_values_old(self):
@@ -152,7 +157,11 @@ class Table:
         self.metadata = metadata
         self.location = location
         self.data = None
-        self.variable = None
+        self.pri_variable = None
+        self.sec_variables = []
+        self.next_variable = None
+        self.next_variable_values_processed = []
+        self.next_variable_values_left = None
 
     def get_variables(self):
         return self.metadata["variables"]
@@ -180,23 +189,66 @@ class Table:
 
     # todo: need to keep track of already received data so we don't ask for stuff we already have
     # todo: support tables that don't have  a 'Tid' column
+    # todo: check for code = 'ContentsCode', we can't use it for a variable, it's the actual contents
     def get_query_variables(self):
-        # print("metadata:")
-        # print(self.metadata)
-        constants = []
-        variables = self.metadata["variables"]
-        allVariable = None
-        for variable in variables:
-            code = variable['code']
-            if code == 'Tid':
-                allVariable = variable['code']
-            else:
-                constants.append((variable['code'], random.choice(variable["values"])))
-        if allVariable is None:
-            code_value = random.choice(constants)
-            constants.remove(code_value)
-            allVariable = code_value[0]
-        return allVariable, constants
+        # logging.info("metadata: {}".format(self.metadata))
+        try:
+            codes = []
+            variables = {}
+            # variables = self.metadata["variables"]
+            for variable in self.metadata["variables"]:
+                codes.append(variable["code"])
+                variables[variable["code"]] = list(variable["values"])
+
+            if "ContentsCode" in codes:
+                codes.remove("ContentsCode")
+
+            if self.pri_variable is None:
+                if 'Tid' in codes:
+                    self.pri_variable = 'Tid'
+                else:
+                    self.pri_variable = random.choice(codes)
+                codes.remove(self.pri_variable)
+
+                if not codes:
+                    self.next_variable = None
+                    self.next_variable_values_left = []
+                    self.next_variable_values_processed = []
+                else:
+                    self.next_variable = random.choice(codes)
+                    codes.remove(self.next_variable)
+                    self.next_variable_values_left = variables[self.next_variable]
+                    random.shuffle(self.next_variable_values_left)
+
+                for code in codes:
+                    self.sec_variables.append((code, random.choice(variables[code])))
+
+            constants = []
+            if self.next_variable is not None:
+                next_variable_value = self.next_variable_values_left.pop()
+                self.next_variable_values_processed.append(next_variable_value)
+                constants = [(self.next_variable, next_variable_value)]
+
+            for sec_var in self.sec_variables:
+                constants.append(sec_var)
+
+            return self.pri_variable, constants
+        except Exception as ex:
+            logging.error("metadata: {}".format(self.metadata))
+            raise ex
+
+        # allVariable = None
+        # for variable in variables:
+        #    code = variable['code']
+        #    if code == 'Tid':
+        #        allVariable = variable['code']
+        #    else:
+        #        constants.append((variable['code'], random.choice(variable["values"])))
+        #if allVariable is None:
+        #    code_value = random.choice(constants)
+        #    constants.remove(code_value)
+        #    allVariable = code_value[0]
+        #return allVariable, constants
 
     # Return a list of tuples with column name and set value
     def get_constants(self):
@@ -215,8 +267,12 @@ class Table:
 
     # todo: take already fetched data into consideration
     def add_data(self, data, variable):
-        self.data = data
-        self.variable = variable
+        if self.data is None:
+            self.data = data
+            self.pri_variable = variable
+            return
+
+        self.data["data"].extend(data["data"])
 
     def get_constant_keys(self):
         data = self.data["data"]
@@ -263,14 +319,35 @@ class Table:
         raise KeyError(code + " does not exist in "+str(self.data["columns"]))
 
     def get_c3_values(self):
-        c3values = [['x'], ["data1"]]
-        variable_code = self.get_variable_code()
-        variable_col_ind = self.get_column_index(variable_code)
+        c3values = [['x']]
+
+        # variable_code = self.get_variable_code()
+        variable_col_ind = self.get_column_index(self.pri_variable)
         if self.data is None:
             return c3values
-        for datum in self.data["data"]:
+
+        metadata = None
+        for var in self.metadata["variables"]:
+            if var["code"] == self.pri_variable:
+                metadata = var
+                break
+
+        # logging.info("pri_variable {}".format(self.pri_variable))
+        # logging.info("variable_col_ind = {}".format(variable_col_ind))
+        # logging.info(metadata)
+
+        valueLen = len(metadata["values"])
+
+        for datum in self.data["data"][:valueLen]:
             c3values[0].append(convert_time(datum["key"][variable_col_ind]))
-            c3values[1].append(orig_value_to_float(datum["values"][0]))
+
+        index = 0
+        for var in self.next_variable_values_processed:
+            values = [self.get_value_text_for_value(self.next_variable, var)]
+            for datum in self.data["data"][index: index+valueLen]:
+                values.append(orig_value_to_float(datum["values"][0]))
+            index += valueLen
+            c3values.append(values)
         return c3values
 
     def print(self):
@@ -430,14 +507,28 @@ def print_hex_str(s):
     print(":".join("{:02x}".format(ord(c)) for c in s))
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
+
     scb = ScbApi()
-    table = scb.get_random_table()
-    print(scb.get_location())
-    print(table["title"])
-    for variable in table["variables"]:
+    # Dödsorsak "http://api.scb.se/OV0104/v1/doris/sv/ssd/HS/HS0301/DodaOrsak/"
+    # table = scb.get_table("http://api.scb.se/OV0104/v1/doris/sv/ssd/HS/HS0301/DodaOrsak/")
+    # hushållsavgifter "http://api.scb.se/OV0104/v1/doris/sv/ssd/HE/HE0201/HE0201C/HBSutgift11C/"
+    #table = scb.get_table("http://api.scb.se/OV0104/v1/doris/sv/ssd/HE/HE0201/HE0201C/HBSutgift11C/")
+    # Table with ContentsCode and Tid columns only:
+    table = scb.get_table("http://api.scb.se/OV0104/v1/doris/en/ssd/TK/TK1001/TK1001S/SnabbStatTK1001/")
+    # Table with regions:
+    #table = scb.get_table("http://api.scb.se/OV0104/v1/doris/en/ssd/OE/OE0108/KomFtgK/")
+    # table = scb.get_random_table()
+    print("location: {}".format(scb.get_location()))
+    print("title: {}".format(table.get_title()))
+
+    for variable in table.get_variables():
         print(variable)
-    tv = scb.get_random_table_values()
+
+    scb.get_random_table_values(table)
     #print_hex_str(tv)
     #print("'"+tv+"'")
     #print(json.loads(tv[1:]))
-    print(tv)
+    print(table)
+    scb.get_random_table_values(table)
+    print(table)

@@ -82,6 +82,7 @@ def load_table():
     try:
         scbTable = scb.get_random_table()
         scb.get_random_table_values(scbTable)
+        scb.get_random_table_values(scbTable)
         logging.info(scbTable)
         # print(scbTable)
 
