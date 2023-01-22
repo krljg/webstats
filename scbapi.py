@@ -6,7 +6,7 @@ import logging
 
 __author__ = 'calx'
 
-baseUrl = "http://api.scb.se/OV0104/v1/doris/en/ssd/"
+baseUrl = "https://api.scb.se/OV0104/v1/doris/"
 
 
 def get(url, expected=200):
@@ -49,7 +49,7 @@ def convert_time(orig_value):
 class ScbApi:
     def __init__(self, lang="sv"):
         self.lang = lang
-        self.current = "http://api.scb.se/OV0104/v1/doris/"+self.lang+"/ssd/"
+        self.current = baseUrl+self.lang+"/ssd/"
         self.current_data = None
         self.cache = {}
 
@@ -81,7 +81,7 @@ class ScbApi:
         return self.current_data
 
     def get_random_table(self):
-        self.current = "http://api.scb.se/OV0104/v1/doris/"+self.lang+"/ssd/"
+        self.current = baseUrl+self.lang+"/ssd/"
         self.get_current()
         while not self.is_at_table():
             self.get_sub(random.choice(self.current_data)['id'])
@@ -116,6 +116,9 @@ class ScbApi:
 
         if response.status_code != 200:
             raise Exception("Unexpected response "+str(response.status_code)+": "+response.text)
+
+        logging.info("response.text: "+response.text)
+
         rspStr = json.loads(response.text[1:])
         scbTable.add_data(rspStr, allVariable)
         #return TableData(json.loads(response.text[1:]), allVariable)
@@ -429,14 +432,17 @@ class TableMetaData:
 def print_hex_str(s):
     print(":".join("{:02x}".format(ord(c)) for c in s))
 
+
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
+
     scb = ScbApi()
     table = scb.get_random_table()
     print(scb.get_location())
-    print(table["title"])
-    for variable in table["variables"]:
+    print(table.get_title())
+    for variable in table.get_variables():
         print(variable)
-    tv = scb.get_random_table_values()
+    tv = scb.get_random_table_values(table)
     #print_hex_str(tv)
     #print("'"+tv+"'")
     #print(json.loads(tv[1:]))
