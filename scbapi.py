@@ -119,7 +119,7 @@ class ScbApi:
 
         logging.info("response.text: "+response.text)
 
-        rspStr = json.loads(response.text[1:])
+        rspStr = json.loads(response.text)
         scbTable.add_data(rspStr, allVariable)
         #return TableData(json.loads(response.text[1:]), allVariable)
 
