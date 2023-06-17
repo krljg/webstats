@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <title>Random Statistics from the SCB</title>
     <!-- <meta http-equiv="refresh" content="20"> -->
-    <link href="/static/c3-0.7.10/c3.css" rel="stylesheet" type="text/css" >
-    <script src="/static/c3-0.7.10/c3.min.js" charset="UTF-8"></script>
+    <link href="/static/c3-0.7.20/c3.css" rel="stylesheet" type="text/css" >
+    <script src="/static/c3-0.7.20/c3.min.js" charset="UTF-8"></script>
     <style>
 
 .rect {
@@ -80,6 +80,9 @@ var chart = c3.generate({
     data: {
         x: 'x',
         columns: c3data
+        //axes: {
+        //    x: 'x'
+        //}
     },
     axis: {
         x: {
